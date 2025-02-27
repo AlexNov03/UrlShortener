@@ -1,0 +1,13 @@
+version: '3.8'
+services:
+    db1:
+        image: postgres:latest
+        container_name: postgres_db_url_shortener
+        environment:
+            POSTGRES_USER: alexnov
+            POSTGRES_PASSWORD: alexnov
+            POSTGRES_DB: db
+        ports: 
+            - "5432:5432"
+        volumes:
+            - ./data/postgres:/var/lib/postgresql/data
