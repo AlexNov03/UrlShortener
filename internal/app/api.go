@@ -1,9 +1,16 @@
 package app
 
 import (
+	"flag"
+	"log"
+	"math/rand"
+	"time"
+
+	"github.com/AlexNov03/UrlShortener/internal/adapters"
 	"github.com/AlexNov03/UrlShortener/internal/bootstrap"
 	"github.com/AlexNov03/UrlShortener/internal/delivery"
 	localrepo "github.com/AlexNov03/UrlShortener/internal/repository/local"
+	"github.com/AlexNov03/UrlShortener/internal/repository/pg"
 	"github.com/AlexNov03/UrlShortener/internal/server"
 	"github.com/AlexNov03/UrlShortener/internal/usecase"
 	"github.com/go-playground/validator/v10"
@@ -28,8 +35,26 @@ func (ae *ApiEntryPoint) Init() error {
 
 	validator := validator.New(validator.WithRequiredStructEnabled())
 
-	repo := localrepo.NewUrlRepository()
-	uc := usecase.NewUrlUsecase(repo)
+	inMemory := flag.Bool("in-memory", true, "defines, whether app use in-memory or postgres db")
+
+	flag.Parse()
+
+	var repo usecase.UrlRepository
+	if *inMemory == false {
+		repo = localrepo.NewUrlRepository()
+		log.Printf("app is using postgres db")
+	} else {
+		db, err := adapters.GetDB(ae.cfg)
+		if err != nil {
+			return err
+		}
+		repo = pg.NewUrlRepository(db)
+		log.Printf("app is using in-memory db")
+	}
+
+	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
+
+	uc := usecase.NewUrlUsecase(repo, rnd)
 	deliv := delivery.NewUrlDelivery(uc, validator)
 
 	ae.server = server.NewServer(ae.cfg, deliv)

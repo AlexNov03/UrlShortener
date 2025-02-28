@@ -1,8 +1,10 @@
 package utils
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 )
 
@@ -11,6 +13,7 @@ type RestError struct {
 }
 
 func ProcessInternalServerError(w http.ResponseWriter, message string) {
+	log.Printf("internal server error: %s", message)
 	w.WriteHeader(http.StatusInternalServerError)
 	json.NewEncoder(w).Encode(RestError{Error: message})
 }
@@ -32,15 +35,25 @@ func ProcessUnauthorizedError(w http.ResponseWriter, message string) {
 
 func ProcessError(w http.ResponseWriter, err error) {
 	var internalError *InternalError
-	if err != nil {
-		if ok := errors.As(err, &internalError); ok {
-			if internalError.Code == http.StatusInternalServerError {
-			} else {
-			}
-			w.WriteHeader(internalError.Code)
-			json.NewEncoder(w).Encode(RestError{Error: internalError.Message})
-			return
+
+	if ok := errors.As(err, &internalError); ok {
+		if internalError.Code == http.StatusInternalServerError {
+			log.Printf("internal server error: %v", err)
 		}
+		w.WriteHeader(internalError.Code)
+		json.NewEncoder(w).Encode(RestError{Error: internalError.Message})
 		return
 	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		log.Printf("error deadline exceeded: %v", err)
+		return
+	}
+	if errors.Is(err, context.Canceled) {
+		log.Printf("error context canceled: %v", err)
+		return
+	}
+
+	log.Printf("unknown error: %v", err)
+
 }

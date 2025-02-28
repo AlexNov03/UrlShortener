@@ -1,2 +1,4 @@
 test.go
 config.yaml
+go.sum
+data

@@ -5,11 +5,11 @@ import (
 	"errors"
 	"net/http"
 	"strings"
-	"time"
+
+	"math/rand"
 
 	"github.com/AlexNov03/UrlShortener/internal/models"
 	"github.com/AlexNov03/UrlShortener/utils"
-	"golang.org/x/exp/rand"
 )
 
 type UrlRepository interface {
@@ -19,21 +19,20 @@ type UrlRepository interface {
 
 type UrlUsecase struct {
 	Repo UrlRepository
+	rnd  *rand.Rand
 }
 
-func NewUrlUsecase(repo UrlRepository) *UrlUsecase {
-	return &UrlUsecase{Repo: repo}
+func NewUrlUsecase(repo UrlRepository, rnd *rand.Rand) *UrlUsecase {
+	return &UrlUsecase{Repo: repo, rnd: rnd}
 }
 
 const length = 10
 const charSet = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_"
 
 func (uc *UrlUsecase) generateShortUrl() string {
-
-	rand.Seed(uint64(time.Now().UnixNano()))
 	res := strings.Builder{}
 	for i := 0; i < length; i++ {
-		res.WriteByte(charSet[rand.Intn(len(charSet))])
+		res.WriteByte(charSet[uc.rnd.Intn(len(charSet))])
 	}
 	return res.String()
 
