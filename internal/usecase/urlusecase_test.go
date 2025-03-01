@@ -8,6 +8,7 @@ import (
 
 	"math/rand"
 
+	"github.com/AlexNov03/UrlShortener/internal/bootstrap"
 	"github.com/AlexNov03/UrlShortener/internal/models"
 	"github.com/AlexNov03/UrlShortener/internal/usecase/mocks"
 	"github.com/AlexNov03/UrlShortener/utils"
@@ -25,52 +26,64 @@ func TestShortenUrl(t *testing.T) {
 
 	rnd := rand.New(rand.NewSource(64))
 
-	uc := NewUrlUsecase(mockRepo, rnd)
+	cfg := &bootstrap.Config{}
+	cfg.Server.Protocol, cfg.Server.Host, cfg.Server.Port = "http", "localhost", 8080
+
+	uc := NewUrlUsecase(mockRepo, rnd, cfg)
 	ctx := context.Background()
 
-	generatedShortUrl := uc.generateShortUrl()
-
-	originalUrl := "http://example.ru"
+	suffix := uc.generateShortUrl()
+	generatedShortUrl := fmt.Sprintf("%s://%s:%d/%s", uc.cfg.Server.Protocol, uc.cfg.Server.Host, uc.cfg.Server.Port, suffix)
 
 	tests := []struct {
 		Name           string
+		OriginalUrl    string
 		SetUp          func()
 		ExpectedString string
 		ExpectedErr    error
 	}{
 		{
-			Name: "Test for successful adding generated url",
+			Name:        "Test for successful returning generated url",
+			OriginalUrl: "http://example.ru",
 			SetUp: func() {
-				uc.rnd.Seed(64)
-				mockRepo.EXPECT().GetOriginalUrl(ctx, generatedShortUrl).Return("", &utils.InternalError{
+				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return("", &utils.InternalError{
 					Code: http.StatusNotFound, Message: "no originalUrl match this shortUrl"})
 
-				mockRepo.EXPECT().AddOriginalUrl(ctx, &models.UrlData{OriginalUrl: originalUrl,
-					ShortUrl: generatedShortUrl}).Return(nil)
+				mockRepo.EXPECT().AddOriginalUrl(ctx, &models.UrlData{OriginalUrl: "http://example.ru",
+					ShortUrl: suffix}).Return(nil)
 			},
 			ExpectedString: generatedShortUrl,
 			ExpectedErr:    nil,
 		},
 		{
-			Name: "Test for failed GetOriginalUrl request to db",
+			Name:        "Test for failed GetOriginalUrl request to db",
+			OriginalUrl: "http://example.ru",
 			SetUp: func() {
-				uc.rnd.Seed(64)
-				mockRepo.EXPECT().GetOriginalUrl(ctx, generatedShortUrl).Return("", fmt.Errorf("pg.UrlRepository.GetOriginalUrl:%w", context.DeadlineExceeded))
+				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return("", fmt.Errorf("pg.UrlRepository.GetOriginalUrl:%w", context.DeadlineExceeded))
 			},
 			ExpectedString: "",
 			ExpectedErr:    fmt.Errorf("pg.UrlRepository.GetOriginalUrl:%w", context.DeadlineExceeded),
+		},
+		{
+			Name:        "Test for bad url format",
+			OriginalUrl: "http/example.ru",
+			SetUp: func() {
+			},
+			ExpectedString: "",
+			ExpectedErr:    &utils.InternalError{Code: http.StatusBadRequest, Message: "original url does not fits the url format"},
 		},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.Name, func(t *testing.T) {
 
+			uc.rnd.Seed(64)
 			tt.SetUp()
 
-			shortUrl, err := uc.ShortenUrl(ctx, originalUrl)
+			shortUrl, err := uc.ShortenUrl(ctx, tt.OriginalUrl)
 
-			assert.Equal(t, shortUrl, tt.ExpectedString)
-			assert.Equal(t, err, tt.ExpectedErr)
+			assert.Equal(t, tt.ExpectedString, shortUrl)
+			assert.Equal(t, tt.ExpectedErr, err)
 
 		})
 	}
@@ -85,10 +98,12 @@ func TestGetOriginalUrl(t *testing.T) {
 
 	rnd := rand.New(rand.NewSource(64))
 
-	uc := NewUrlUsecase(mockRepo, rnd)
+	cfg := &bootstrap.Config{}
+
+	uc := NewUrlUsecase(mockRepo, rnd, cfg)
 	ctx := context.Background()
 
-	generatedShortUrl := uc.generateShortUrl()
+	suffix := uc.generateShortUrl()
 
 	originalUrl := "http://example.ru"
 
@@ -101,7 +116,7 @@ func TestGetOriginalUrl(t *testing.T) {
 		{
 			Name: "Test for successful getting original url",
 			SetUp: func() {
-				mockRepo.EXPECT().GetOriginalUrl(ctx, generatedShortUrl).Return(originalUrl, nil)
+				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return(originalUrl, nil)
 			},
 			ExpectedString: originalUrl,
 			ExpectedErr:    nil,
@@ -109,7 +124,7 @@ func TestGetOriginalUrl(t *testing.T) {
 		{
 			Name: "Test for failed getting original url",
 			SetUp: func() {
-				mockRepo.EXPECT().GetOriginalUrl(ctx, generatedShortUrl).Return("",
+				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return("",
 					&utils.InternalError{Code: http.StatusNotFound, Message: "no originalUrl match this shortUrl"})
 			},
 			ExpectedString: "",
@@ -122,10 +137,10 @@ func TestGetOriginalUrl(t *testing.T) {
 
 			tt.SetUp()
 
-			originalUrl, err := uc.GetOriginalUrl(ctx, generatedShortUrl)
+			originalUrl, err := uc.GetOriginalUrl(ctx, suffix)
 
-			assert.Equal(t, originalUrl, tt.ExpectedString)
-			assert.Equal(t, err, tt.ExpectedErr)
+			assert.Equal(t, tt.ExpectedString, originalUrl)
+			assert.Equal(t, tt.ExpectedErr, err)
 
 		})
 	}

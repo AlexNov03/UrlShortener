@@ -3,11 +3,14 @@ package usecase
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 
 	"math/rand"
 
+	"github.com/AlexNov03/UrlShortener/internal/bootstrap"
 	"github.com/AlexNov03/UrlShortener/internal/models"
 	"github.com/AlexNov03/UrlShortener/utils"
 )
@@ -20,10 +23,11 @@ type UrlRepository interface {
 type UrlUsecase struct {
 	Repo UrlRepository
 	rnd  *rand.Rand
+	cfg  *bootstrap.Config
 }
 
-func NewUrlUsecase(repo UrlRepository, rnd *rand.Rand) *UrlUsecase {
-	return &UrlUsecase{Repo: repo, rnd: rnd}
+func NewUrlUsecase(repo UrlRepository, rnd *rand.Rand, cfg *bootstrap.Config) *UrlUsecase {
+	return &UrlUsecase{Repo: repo, rnd: rnd, cfg: cfg}
 }
 
 const length = 10
@@ -40,6 +44,11 @@ func (uc *UrlUsecase) generateShortUrl() string {
 
 func (uc *UrlUsecase) ShortenUrl(ctx context.Context, originalUrl string) (string, error) {
 
+	_, err := url.ParseRequestURI(originalUrl)
+	if err != nil {
+		return "", utils.NewInternalError(http.StatusBadRequest, "original url does not fits the url format")
+	}
+
 	for {
 		shortUrl := uc.generateShortUrl()
 		_, err := uc.Repo.GetOriginalUrl(ctx, shortUrl)
@@ -51,7 +60,7 @@ func (uc *UrlUsecase) ShortenUrl(ctx context.Context, originalUrl string) (strin
 			if err != nil {
 				return "", err
 			}
-			return shortUrl, nil
+			return fmt.Sprintf("%s://%s:%d/%s", uc.cfg.Server.Protocol, uc.cfg.Server.Host, uc.cfg.Server.Port, shortUrl), nil
 		}
 
 		if err != nil {

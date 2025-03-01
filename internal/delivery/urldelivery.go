@@ -33,13 +33,13 @@ func (ud *UrlDelivery) ShortenUrl(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(inputData)
 
 	if err != nil {
-		utils.ProcessBadRequestError(w, "delivery.ShortenUrl: incorrect input data")
+		utils.ProcessBadRequestError(w, "incorrect input data")
 		return
 	}
 
 	err = ud.validator.Struct(inputData)
 	if err != nil {
-		utils.ProcessBadRequestError(w, "delivery.ShortenUrl: incorrect fields in input data")
+		utils.ProcessBadRequestError(w, "incorrect fields in input data")
 		return
 	}
 

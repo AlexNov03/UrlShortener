@@ -27,7 +27,7 @@ func (ur *UrlRepository) AddOriginalUrl(ctx context.Context, data *models.UrlDat
 
 	err := ur.DB.QueryRowContext(ctx, `SELECT 1 FROM url WHERE short_url=$1`, data.ShortUrl).Scan(new(int))
 	if err == nil {
-		return &utils.InternalError{Code: http.StatusConflict, Message: "this shortUrl already exists"}
+		return utils.NewInternalError(http.StatusConflict, "this shortUrl already exists")
 	}
 
 	if err != sql.ErrNoRows {
@@ -52,7 +52,7 @@ func (ur *UrlRepository) GetOriginalUrl(ctx context.Context, shortUrl string) (s
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "", &utils.InternalError{Code: http.StatusNotFound, Message: "no originalUrl match this shortUrl"}
+			return "", utils.NewInternalError(http.StatusNotFound, "no originalUrl match this shortUrl")
 		}
 		return "", fmt.Errorf("pg.UrlRepository.GetOriginalUrl: %w", err)
 	}

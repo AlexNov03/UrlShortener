@@ -40,21 +40,22 @@ func (ae *ApiEntryPoint) Init() error {
 	flag.Parse()
 
 	var repo usecase.UrlRepository
-	if *inMemory == false {
+	if *inMemory == true {
 		repo = localrepo.NewUrlRepository()
-		log.Printf("app is using postgres db")
+		log.Printf("app is using in-memory db")
 	} else {
 		db, err := adapters.GetDB(ae.cfg)
 		if err != nil {
 			return err
 		}
+		defer db.Close()
 		repo = pg.NewUrlRepository(db)
-		log.Printf("app is using in-memory db")
+		log.Printf("app is using postgres db")
 	}
 
 	rnd := rand.New(rand.NewSource(time.Now().UnixNano()))
 
-	uc := usecase.NewUrlUsecase(repo, rnd)
+	uc := usecase.NewUrlUsecase(repo, rnd, ae.cfg)
 	deliv := delivery.NewUrlDelivery(uc, validator)
 
 	ae.server = server.NewServer(ae.cfg, deliv)
