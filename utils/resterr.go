@@ -37,7 +37,7 @@ func ProcessError(w http.ResponseWriter, err error) {
 	var internalError *InternalError
 
 	if ok := errors.As(err, &internalError); ok {
-		if internalError.Code == http.StatusInternalServerError {
+		if internalError.Code >= 500 {
 			log.Printf("internal server error: %v", err)
 		}
 		w.WriteHeader(internalError.Code)
@@ -47,13 +47,17 @@ func ProcessError(w http.ResponseWriter, err error) {
 
 	if errors.Is(err, context.DeadlineExceeded) {
 		log.Printf("error deadline exceeded: %v", err)
+		w.WriteHeader(http.StatusRequestTimeout)
+		json.NewEncoder(w).Encode(RestError{Error: err.Error()})
 		return
 	}
+
 	if errors.Is(err, context.Canceled) {
 		log.Printf("error context canceled: %v", err)
 		return
 	}
 
 	log.Printf("unknown error: %v", err)
-
+	w.WriteHeader(http.StatusInternalServerError)
+	json.NewEncoder(w).Encode(RestError{Error: err.Error()})
 }

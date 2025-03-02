@@ -1,6 +1,7 @@
 package app
 
 import (
+	"database/sql"
 	"flag"
 	"log"
 	"math/rand"
@@ -19,6 +20,7 @@ import (
 type ApiEntryPoint struct {
 	cfg    *bootstrap.Config
 	server *server.Server
+	db     *sql.DB
 }
 
 func NewApiEntryPoint() *ApiEntryPoint {
@@ -48,7 +50,7 @@ func (ae *ApiEntryPoint) Init() error {
 		if err != nil {
 			return err
 		}
-		defer db.Close()
+		ae.db = db
 		repo = pg.NewUrlRepository(db)
 		log.Printf("app is using postgres db")
 	}
@@ -65,10 +67,13 @@ func (ae *ApiEntryPoint) Init() error {
 }
 
 func (ae *ApiEntryPoint) Run() error {
+	log.Printf("api starting...")
+	defer ae.db.Close()
 	return ae.server.Run()
 
 }
 
 func (ae *ApiEntryPoint) Stop() error {
+	log.Printf("api stopped")
 	return ae.server.Stop()
 }

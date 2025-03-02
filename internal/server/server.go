@@ -23,7 +23,7 @@ func NewServer(cfg *bootstrap.Config, delivery *delivery.UrlDelivery) *Server {
 
 func (s *Server) Init() {
 	s.server = &http.Server{
-		Addr:         fmt.Sprintf("%s:%d", s.cfg.Server.Host, s.cfg.Server.Port),
+		Addr:         fmt.Sprintf("%s:%d", "0.0.0.0", s.cfg.Server.Port),
 		ReadTimeout:  10 * time.Second,
 		WriteTimeout: 10 * time.Second,
 	}
@@ -31,7 +31,7 @@ func (s *Server) Init() {
 }
 
 func (s *Server) Run() error {
-	log.Printf("starting server on address %s", s.server.Addr)
+	log.Printf("starting server, listening on addr %s", s.server.Addr)
 	if err := s.server.ListenAndServe(); err != nil {
 		return fmt.Errorf("error while starting server: %v ", err)
 	}

@@ -1,4 +1,4 @@
-DB_HOST := $(shell yq '.database.host' config.yaml )
+DB_HOST := $(shell yq '.migrate_db_host' config.yaml )
 DB_PORT := $(shell yq '.database.port' config.yaml)
 DB_USER := $(shell yq '.database.username' config.yaml)
 DB_PASSWORD := $(shell yq '.database.password' config.yaml)
@@ -18,9 +18,6 @@ migrate-down:
 
 create-migration:
 	goose create $(name) sql -dir ./migrations
-
-build:
-	go build -o myapp $(PROJECT_PATH)
 
 start:
 	sudo docker-compose up --build -d
