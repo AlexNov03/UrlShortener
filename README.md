@@ -12,24 +12,24 @@
 Запуск приложения с базой данных Postgres 
 ```yaml
 mainservice:
-build: .
-container_name: url_shortener
-ports:
-    - "8080:8080"
-command: ["./output", "-in-memory=false"]
-depends_on:
-    - db1
+    build: .
+    container_name: url_shortener
+    ports:
+        - "8080:8080"
+    command: ["./output", "-in-memory=false"]
+    depends_on:
+        - db1
 ```
 Запуск приложения с in-memory базой данных 
 ```yaml
 mainservice:
-build: .
-container_name: url_shortener
-ports:
-    - "8080:8080"
-command: ["./output", "-in-memory=true"]
-depends_on:
-    - db1
+    build: .
+    container_name: url_shortener
+    ports:
+        - "8080:8080"
+    command: ["./output", "-in-memory=true"]
+    depends_on:
+        - db1
 ```
 ## Примеры входных и выходных данных
 Входные данные 
