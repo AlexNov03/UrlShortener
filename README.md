@@ -41,7 +41,7 @@ depends_on:
 Выходные данные 
 ```json
 {
-  "shortened_url":"http://<IP_ADRESS>:8080/Ab_Cgf_edB"
+  "shortened_url":"http://<IP_ADDRESS>:8080/Ab_Cgf_edB"
 }
 ```
 ## Работа с приложением
