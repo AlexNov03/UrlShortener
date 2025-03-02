@@ -35,7 +35,7 @@ mainservice:
 Входные данные 
 ```json
 {
-  "original_url":"http://ya.ru"
+  "original_url":"https://ya.ru/?npr=1\u0026utm_referrer=https%3A%2F%2Fyandex.ru%2F\u0026ysclid=m7s5w6kifw169384164"
 }
 ```
 Выходные данные 
