@@ -58,3 +58,19 @@ func (ur *UrlRepository) GetOriginalUrl(ctx context.Context, shortUrl string) (s
 	}
 	return originalUrl, nil
 }
+
+func (ur *UrlRepository) GetShortUrlByLong(ctx context.Context, longUrl string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Second*5)
+	defer cancel()
+
+	var shortUrl string
+	err := ur.DB.QueryRowContext(ctx, `SELECT short_url FROM url WHERE original_url=$1`, longUrl).Scan(&shortUrl)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "", utils.NewInternalError(http.StatusNotFound, "no shortUrl match this originalUrl")
+		}
+		return "", fmt.Errorf("pg.UrlRepository.GetShortUrlByLong: %w", err)
+	}
+	return shortUrl, nil
+}
