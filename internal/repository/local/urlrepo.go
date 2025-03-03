@@ -10,12 +10,13 @@ import (
 )
 
 type UrlRepository struct {
-	mu    sync.RWMutex
-	store map[string]string
+	mu            sync.RWMutex
+	storeShortUrl map[string]string
+	storeLongUrl  map[string]string
 }
 
 func NewUrlRepository() *UrlRepository {
-	return &UrlRepository{mu: sync.RWMutex{}, store: make(map[string]string)}
+	return &UrlRepository{mu: sync.RWMutex{}, storeShortUrl: make(map[string]string), storeLongUrl: make(map[string]string)}
 }
 
 func (ur *UrlRepository) AddOriginalUrl(ctx context.Context, data *models.UrlData) error {
@@ -26,10 +27,16 @@ func (ur *UrlRepository) AddOriginalUrl(ctx context.Context, data *models.UrlDat
 	ur.mu.Lock()
 	defer ur.mu.Unlock()
 
-	if _, ok := ur.store[shortUrl]; ok {
-		return &utils.InternalError{Code: http.StatusConflict, Message: "this shortUrl already exists"}
+	if _, ok := ur.storeShortUrl[shortUrl]; ok {
+		return utils.NewInternalError(http.StatusConflict, "this shortUrl already exists")
 	}
-	ur.store[shortUrl] = origUrl
+	if _, ok := ur.storeLongUrl[origUrl]; ok {
+		return utils.NewInternalError(http.StatusConflict, "this longUrl already exists")
+	}
+
+	ur.storeShortUrl[shortUrl] = origUrl
+	ur.storeLongUrl[origUrl] = shortUrl
+
 	return nil
 }
 
@@ -38,9 +45,21 @@ func (ur *UrlRepository) GetOriginalUrl(ctx context.Context, shortUrl string) (s
 	ur.mu.RLock()
 	defer ur.mu.RUnlock()
 
-	val, ok := ur.store[shortUrl]
+	val, ok := ur.storeShortUrl[shortUrl]
 	if !ok {
 		return "", &utils.InternalError{Code: http.StatusNotFound, Message: "no originalUrl match this shortUrl"}
 	}
+	return val, nil
+}
+
+func (ur *UrlRepository) GetShortUrlByLong(ctx context.Context, longUrl string) (string, error) {
+	ur.mu.RLock()
+	defer ur.mu.RUnlock()
+
+	val, ok := ur.storeLongUrl[longUrl]
+	if !ok {
+		return "", &utils.InternalError{Code: http.StatusNotFound, Message: "no shortUrl match this originalUrl"}
+	}
+
 	return val, nil
 }
