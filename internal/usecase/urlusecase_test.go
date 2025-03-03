@@ -38,18 +38,22 @@ func TestShortenUrl(t *testing.T) {
 	tests := []struct {
 		Name           string
 		OriginalUrl    string
-		SetUp          func()
+		SetUp          func(string)
 		ExpectedString string
 		ExpectedErr    error
 	}{
 		{
 			Name:        "Test for successful returning generated url",
-			OriginalUrl: "http://example.ru",
-			SetUp: func() {
+			OriginalUrl: "http://ozon.ru",
+			SetUp: func(originalUrl string) {
+
+				mockRepo.EXPECT().GetShortUrlByLong(ctx, originalUrl).Return("",
+					&utils.InternalError{Code: http.StatusNotFound, Message: "no shortUrl match this originalUrl"})
+
 				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return("", &utils.InternalError{
 					Code: http.StatusNotFound, Message: "no originalUrl match this shortUrl"})
 
-				mockRepo.EXPECT().AddOriginalUrl(ctx, &models.UrlData{OriginalUrl: "http://example.ru",
+				mockRepo.EXPECT().AddOriginalUrl(ctx, &models.UrlData{OriginalUrl: originalUrl,
 					ShortUrl: suffix}).Return(nil)
 			},
 			ExpectedString: generatedShortUrl,
@@ -57,8 +61,11 @@ func TestShortenUrl(t *testing.T) {
 		},
 		{
 			Name:        "Test for failed GetOriginalUrl request to db",
-			OriginalUrl: "http://example.ru",
-			SetUp: func() {
+			OriginalUrl: "http://ozon.ru",
+			SetUp: func(originalUrl string) {
+				mockRepo.EXPECT().GetShortUrlByLong(ctx, originalUrl).Return("",
+					&utils.InternalError{Code: http.StatusNotFound, Message: "no shortUrl match this originalUrl"})
+
 				mockRepo.EXPECT().GetOriginalUrl(ctx, suffix).Return("", fmt.Errorf("pg.UrlRepository.GetOriginalUrl:%w", context.DeadlineExceeded))
 			},
 			ExpectedString: "",
@@ -66,8 +73,10 @@ func TestShortenUrl(t *testing.T) {
 		},
 		{
 			Name:        "Test for bad url format",
-			OriginalUrl: "http/example.ru",
-			SetUp: func() {
+			OriginalUrl: "httpozon.ru",
+			SetUp: func(originalUrl string) {
+				mockRepo.EXPECT().GetShortUrlByLong(ctx, originalUrl).Return("",
+					&utils.InternalError{Code: http.StatusNotFound, Message: "no shortUrl match this originalUrl"})
 			},
 			ExpectedString: "",
 			ExpectedErr:    &utils.InternalError{Code: http.StatusBadRequest, Message: "original url does not fits the url format"},
@@ -78,7 +87,7 @@ func TestShortenUrl(t *testing.T) {
 		t.Run(tt.Name, func(t *testing.T) {
 
 			uc.rnd.Seed(64)
-			tt.SetUp()
+			tt.SetUp(tt.OriginalUrl)
 
 			shortUrl, err := uc.ShortenUrl(ctx, tt.OriginalUrl)
 

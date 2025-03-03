@@ -18,6 +18,7 @@ import (
 type UrlRepository interface {
 	AddOriginalUrl(ctx context.Context, data *models.UrlData) error
 	GetOriginalUrl(ctx context.Context, shortUrl string) (string, error)
+	GetShortUrlByLong(ctx context.Context, longUrl string) (string, error)
 }
 
 type UrlUsecase struct {
@@ -44,7 +45,16 @@ func (uc *UrlUsecase) generateShortUrl() string {
 
 func (uc *UrlUsecase) ShortenUrl(ctx context.Context, originalUrl string) (string, error) {
 
-	_, err := url.ParseRequestURI(originalUrl)
+	shortUrl, err := uc.Repo.GetShortUrlByLong(ctx, originalUrl)
+	if err == nil {
+		return fmt.Sprintf("%s://%s:%d/%s", uc.cfg.Server.Protocol, uc.cfg.Server.Host, uc.cfg.Server.Port, shortUrl), nil
+	}
+	var interr *utils.InternalError
+	if !(errors.As(err, &interr) && interr.Code == http.StatusNotFound) {
+		return "", err
+	}
+
+	_, err = url.ParseRequestURI(originalUrl)
 	if err != nil {
 		return "", utils.NewInternalError(http.StatusBadRequest, "original url does not fits the url format")
 	}
@@ -52,8 +62,6 @@ func (uc *UrlUsecase) ShortenUrl(ctx context.Context, originalUrl string) (strin
 	for {
 		shortUrl := uc.generateShortUrl()
 		_, err := uc.Repo.GetOriginalUrl(ctx, shortUrl)
-
-		var interr *utils.InternalError
 
 		if errors.As(err, &interr) && interr.Code == http.StatusNotFound {
 			err = uc.Repo.AddOriginalUrl(ctx, &models.UrlData{OriginalUrl: originalUrl, ShortUrl: shortUrl})
